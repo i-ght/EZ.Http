@@ -133,7 +133,7 @@ public static class CurlEz
     public static CURL Alloc() =>
         new();
 
-    public static void Dispose(
+    public static void Free(
         CURL a
     ) => a.Dispose();
 
@@ -235,7 +235,7 @@ public static class CurlMulti
         );
 
     public static CURLM Alloc() =>
-        new CURLM();
+        new();
 
     public static void ThrowIfErr(
         CURLMcode code)

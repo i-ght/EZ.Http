@@ -27,7 +27,7 @@ internal class AsyncOperation<TValue>
     private interface AsyncOp
     {
         readonly record struct Return(TValue Value) : AsyncOp;
-        readonly record struct Throw(Exception Exception) : AsyncOp;
+        readonly record struct Throw : AsyncOp;
     }
 
     private readonly Channel<AsyncOp> _channel;
@@ -54,7 +54,7 @@ internal class AsyncOperation<TValue>
     public bool TryThrow(
         Exception e)
     {
-        if (!_channel.Writer.TryWrite(new AsyncOp.Throw(e))) {
+        if (!_channel.Writer.TryWrite(new AsyncOp.Throw())) {
             return false;
         }
        
@@ -82,7 +82,7 @@ internal class AsyncOperation<TValue>
         switch (await read) {
             case AsyncOp.Return ret:
                 return ret.Value;
-            case AsyncOp.Throw {Exception: var _ex}:
+            case AsyncOp.Throw:
                 /* will throw ------------------/\ */
                 await _channel.Reader.Completion
                     .ConfigureAwait(false);
@@ -104,8 +104,9 @@ internal class EZHttpXfer : IDisposable
     private readonly GCHandle _gcHandle;
     private readonly Action<CURL> _freeCURL;
 
-    /* unpwned native allocated resource */
+    /* unpwned by the class. */
     public CURL EZ { get; }
+    /* owned by the class*/
     public curl_slist Headers { get; }
 
     public EZHttpRequest Req { get; }
@@ -149,11 +150,12 @@ internal class EZHttpXfer : IDisposable
         CURL easy,
         Action<CURL> freeCURL)
     {
-        _gcHandle = GCHandle.Alloc(this);
+        var mySelf = this;
+        _gcHandle = GCHandle.Alloc(mySelf);
         _freeCURL = freeCURL;
         Req = req;
         EZ = easy; /* not owned */
-        ResponseHeads = new List<(EZHttpStatusCode, List<ReadOnlyMemory<byte>>)>(2);
+        ResponseHeads = new(2);
         Body = 
             Channel.CreateBounded<ReadOnlyMemory<byte>>(
                 capacity: 256
@@ -164,9 +166,9 @@ internal class EZHttpXfer : IDisposable
                 logLevel: LogLevel.Trace,
                 logToStdErrThreshold: LogLevel.Warning
             );*/
-        Headers = CurlSList.Alloc();
-        RcvdFinalMsgHead = new AsyncOperation<EZHttpResponse>();
-        RcvdFinalRespMsg = new AsyncOperation<unit>();
+        Headers = new();
+        RcvdFinalMsgHead = new();
+        RcvdFinalRespMsg = new();
     }
 }
 
@@ -182,7 +184,7 @@ internal readonly struct SemaAcq : IDisposable
 
     public static async Task<SemaAcq> AcquireAsync(
         SemaphoreSlim l,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken = default)
     {
         await l.WaitAsync(cancellationToken)
             .ConfigureAwait(false);
@@ -319,7 +321,7 @@ internal static class CurlCallbacks
             );
         }
 
-        var length = (size * nmemb);
+        nuint length = size * nmemb;
 
         var line =
             new ReadOnlySpan<byte>(
@@ -669,7 +671,6 @@ internal static class EZHttpConduct
         ConfigureCURLMoptions(multi, connectCfg);
 
         const int _256KB = 262144;
-        
         new Thread(
             () =>
                 ProcIO(
