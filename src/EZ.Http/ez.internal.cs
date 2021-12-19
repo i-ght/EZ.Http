@@ -106,16 +106,19 @@ internal class EZHttpXfer : IDisposable
 
     /* unpwned by the class. */
     public CURL EZ { get; }
-    /* owned by the class*/
-    public curl_slist Headers { get; }
-
     public EZHttpRequest Req { get; }
-    /*public Logger Logger { get; }*/
-    public List<(EZHttpStatusCode, List<ReadOnlyMemory<byte>>)> ResponseHeads { get; }
-    public AsyncOperation<EZHttpResponse> RcvdFinalMsgHead { get; }
-    public AsyncOperation<unit> RcvdFinalRespMsg { get; }
 
-    public Channel<ReadOnlyMemory<byte>> Body { get; }
+    /* owned by the class*/
+    public curl_slist Headers { get; } = new();
+    /*public Logger Logger { get; }*/
+    public List<(EZHttpStatusCode, List<ReadOnlyMemory<byte>>)> ResponseHeads { get; } = new(2);
+    public AsyncOperation<EZHttpResponse> RcvdFinalMsgHead { get; } = new();
+    public AsyncOperation<unit> RcvdFinalRespMsg { get; } = new();
+
+    public Channel<ReadOnlyMemory<byte>> Body { get; } =
+        Channel.CreateBounded<ReadOnlyMemory<byte>>(
+            capacity: 256
+        );
 
     public List<ReadOnlyMemory<byte>> CurrentResponseHeaders {
         get {
@@ -154,21 +157,13 @@ internal class EZHttpXfer : IDisposable
         _gcHandle = GCHandle.Alloc(mySelf);
         _freeCURL = freeCURL;
         Req = req;
-        EZ = easy; /* not owned */
-        ResponseHeads = new(2);
-        Body = 
-            Channel.CreateBounded<ReadOnlyMemory<byte>>(
-                capacity: 256
-            );
+        EZ = easy;
         /*Logger =
             new ConsoleLogger(
                 name: $"Xfer {{ CURL={(nint)easy}, Request={{ Proxy={Req.Proxy}; Uri={Req.Uri} }} }}",
                 logLevel: LogLevel.Trace,
                 logToStdErrThreshold: LogLevel.Warning
             );*/
-        Headers = new();
-        RcvdFinalMsgHead = new();
-        RcvdFinalRespMsg = new();
     }
 }
 

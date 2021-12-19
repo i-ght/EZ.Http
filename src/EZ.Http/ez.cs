@@ -15,7 +15,7 @@ public record class EZHttpRequest
 {
     public string Method { get; }
     public Uri Uri { get; }
-    public Uri? Proxy { get; set; }
+    public Uri? Proxy { get; set; } = default;
     public EZHttpHeaders Headers { get; init; } = new() { ["Accept"] = "*/*"};
     public TimeSpan Timeout { get; init; } = TimeSpan.FromSeconds(0.0);
     public bool Verbose { get; init; } = false;
@@ -254,7 +254,7 @@ public static class EZHttp
         RequestResponse(
             request,
             CurlEz.Alloc,
-            CurlEz.Dispose
+            CurlEz.Free
         );
     }
 }
