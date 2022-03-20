@@ -1,2 +1,3 @@
 # EZ.Http
-C# wrapped around http curl client library code with loving arms
+C# wrapped around libcurl http client code
+with loving arms
