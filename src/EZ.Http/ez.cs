@@ -4,11 +4,6 @@ using System.Threading.Channels;
 using EZ.Http.curl.h;
 using static EZ.Http.curl.h.libcurl;
 
-/*
-https://www.youtube.com/watch?v=7wL1NyqLs5E
-#PromentalshitbackwashpsychosisEnemaSquad
-*/
-
 namespace EZ.Http;
 
 public record class EZHttpRequest
